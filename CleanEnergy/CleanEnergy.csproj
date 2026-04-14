@@ -11,11 +11,6 @@
     <DebugType>portable</DebugType>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Remove="Assets\**" />
-    <EmbeddedResource Remove="Assets\**" />
-    <None Remove="Assets\**" />
-  </ItemGroup>
-  <ItemGroup>
     <Compile Remove=".cs" />
   </ItemGroup>
   <ItemGroup>

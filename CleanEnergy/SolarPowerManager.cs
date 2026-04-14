@@ -27,6 +27,8 @@ namespace CleanEnergy
 
         // Default to medium solar power strength
         private float solarPowerEfficiency = 0.5f;
+        // Batter efficiency determines how quickly the battery loses charge
+        private float shipBatteryEfficiency = 1.0f;
 
         // Player starts off on the dark side of Timber Hearth
         private float sunBrightness = 0.0f;
@@ -37,7 +39,7 @@ namespace CleanEnergy
         private const float CHECK_OCCLUSION_INTERVAL = 1.0f;
         private float checkOcclusionTimer = 0.0f;
 
-        private float MAX_FUEL_REFILL_RATE = 100.0f;
+        private float MAX_FUEL_REFILL_RATE = 1000.0f;
 
         public static SolarPowerManager Create(Transform ship, IModConsole modHelperConsole)
         {
@@ -56,16 +58,41 @@ namespace CleanEnergy
             solarPowerManager.shipResourceManager = shipResources;
             solarPowerManager.shipStartFuel = shipResources.GetFuel();
 
+            // Locate the ship's cabin module
+            Transform shipCabin = ship.Find("Module_Cabin");
+
+            if (shipCabin != null)
+            {
+                // Load and attach the solar panels to the ship's cabin
+                GameObject solarPanels = SolarPanelLoader.LoadSolarPanels();
+
+                if (solarPanels != null)
+                {
+                    solarPanels.transform.SetParent(shipCabin, false);
+                    solarPanels.transform.localPosition = new Vector3(0.0f, 0.0f, 0.0f);
+                    solarPanels.SetActive(true);
+                }
+                else
+                {
+                    modHelperConsole.WriteLine("Failed to load solar panel model", MessageType.Error);
+                }
+
+            }
+            else
+            {
+                modHelperConsole.WriteLine("Couldn't locate the ship cabin to attach solar panels to", MessageType.Error);
+            }
+
             return solarPowerManager;
         }
 
         public void Start()
         {
             // Max fuel refill rate is 1% of the starting fuel per second
-            MAX_FUEL_REFILL_RATE = shipStartFuel / 100.0f;
+            MAX_FUEL_REFILL_RATE = shipStartFuel / 10.0f;
         }
 
-        public void UpdateSettings(string solarEfficiency)
+        public void UpdateSettings(string solarEfficiency, string batteryEfficiency)
         {
             switch (solarEfficiency)
             {
@@ -86,7 +113,26 @@ namespace CleanEnergy
                     return;
             }
 
-            modConsole.WriteLine($"Updated solar power generation strength to {solarEfficiency}", MessageType.Success);
+            switch (batteryEfficiency)
+            {
+                case "Low":
+                    shipBatteryEfficiency = 0.5f;
+                    break;
+                case "Medium":
+                    shipBatteryEfficiency = 1.0f;
+                    break;
+                case "High":
+                    shipBatteryEfficiency = 1.5f;
+                    break;
+                case "Ultra":
+                    shipBatteryEfficiency = 2.0f;
+                    break;
+                default:
+                    modConsole.WriteLine($"Invalid battery efficiency: {batteryEfficiency}", MessageType.Error);
+                    return;
+            }
+
+            modConsole.WriteLine($"Updated solar power generation strength to {solarEfficiency} and battery efficiency to {batteryEfficiency}", MessageType.Success);
         }
 
         public void Update()
@@ -114,15 +160,13 @@ namespace CleanEnergy
             float inverseSquareFalloff = sunToTimberHearthDistance * sunToTimberHearthDistance / (sunSurfaceDistance * sunSurfaceDistance);
 
             // The ship's battery should last 150 seconds without solar power
-            float fuelDrainConstant = shipStartFuel / 150.0f;
+            float fuelDrainConstant = shipStartFuel / (150.0f * shipBatteryEfficiency);
+            float fuelDrainRate = fuelDrainConstant * Time.deltaTime;
 
-            float fuelDrainRate = 0.0f;
-            if (sunBrightness <= 0.0f) fuelDrainRate = fuelDrainConstant * Time.deltaTime;
+            // The ship's battery should take 75 seconds to refuel at Timber Hearth
+            float fuelRefillConstant = shipStartFuel / 75.0f;
 
-            // The ship's battery should take 100 seconds to refuel at Timber Hearth
-            float fuelRefillConstant = shipStartFuel / 100.0f;
-
-            // At Timber Hearth's distance from the sun, the solar panels should also take 150 seconds to fully recharge on medium efficiency
+            // At Timber Hearth's distance from the sun, the solar panels should take 75 seconds to fully recharge on medium efficiency
             float fuelRefillRate = 0.0f;
             if (sunBrightness > 0.0f) fuelRefillRate = solarPowerEfficiency * fuelRefillConstant * inverseSquareFalloff * Time.deltaTime;
 
@@ -130,10 +174,8 @@ namespace CleanEnergy
             fuelRefillRate = Math.Min(fuelRefillRate, MAX_FUEL_REFILL_RATE);
 
             // Update the ship's fuel
-            shipResourceManager.DrainFuel(fuelDrainRate);
-
             float currentFuel = shipResourceManager.GetFuel();
-            shipResourceManager.SetFuel(currentFuel + fuelRefillRate);
+            shipResourceManager.SetFuel(currentFuel + fuelRefillRate - fuelDrainRate);
 
             // Increase the sun occlusion timer
             checkOcclusionTimer += Time.deltaTime;
@@ -164,7 +206,6 @@ namespace CleanEnergy
         private float GetSunOcclusionFraction()
         {
             Vector3 shipPos = transform.position;
-            float occlusion = 0.0f;
 
             Transform caveTwin = Locator.GetAstroObject(AstroObject.Name.CaveTwin).transform;   // Ember Twin
             float caveTwinRadius = 170.0f;
@@ -190,84 +231,117 @@ namespace CleanEnergy
             Transform comet = Locator.GetAstroObject(AstroObject.Name.Comet).transform;
             float cometRadius = 83.0f;
 
-            occlusion += GetOcclusionFromBody(shipPos, caveTwin, caveTwinRadius);
-            occlusion += GetOcclusionFromBody(shipPos, towerTwin, towerTwinRadius);
-            occlusion += GetOcclusionFromBody(shipPos, timberHearth, timberHearthRadius);
-            occlusion += GetOcclusionFromBody(shipPos, attlerock, attlerockRadius);
-            occlusion += GetOcclusionFromBody(shipPos, brittleHollow, brittleHollowRadius);
-            occlusion += GetOcclusionFromBody(shipPos, volcanicMoon, volcanicMoonRadius);
-            occlusion += GetOcclusionFromBody(shipPos, giantsDeep, giantsDeepRadius);
-            occlusion += GetOcclusionFromBody(shipPos, darkBramble, darkBrambleRadius);
-            occlusion += GetOcclusionFromBody(shipPos, comet, cometRadius);
+            List<(Vector3 pos, float radius)> planets = new List<(Vector3 pos, float radius)>()
+            {
+                (caveTwin.position, caveTwinRadius),
+                (towerTwin.position, towerTwinRadius),
+                (timberHearth.position, timberHearthRadius),
+                (attlerock.position, attlerockRadius),
+                (brittleHollow.position, brittleHollowRadius),
+                (volcanicMoon.position, volcanicMoonRadius),
+                (giantsDeep.position, giantsDeepRadius),
+                (darkBramble.position, darkBrambleRadius),
+                (comet.position, cometRadius)
+            };
 
-            modConsole.WriteLine($"Occlusion: {occlusion}", MessageType.Success);
+            List<Vector3> sunSampleDirections = GetSunSampleDirections(sunTransform.position, shipPos);
+            int occludedSamples = 0;
+
+            foreach (Vector3 dir in sunSampleDirections) 
+            {
+                if (IsSampleOccluded(shipPos, dir, planets)) occludedSamples++;
+            }
+
+            float occlusion = (float)occludedSamples / sunSampleDirections.Count;
 
             return occlusion;
         }
 
-        private float GetOcclusionFromBody(Vector3 observerPos, Transform body, float bodyRadius)
+        bool IsSampleOccluded(Vector3 origin, Vector3 dir, List<(Vector3 pos, float radius)> planets)
         {
-            Vector3 toSun = sunTransform.position - observerPos;
-            Vector3 toBody = body.position - observerPos;
+            float rayMaxLengthSqr = (sunTransform.position - origin).sqrMagnitude;
 
-            float sunDistance = toSun.magnitude;
-            float bodyDistance = toBody.magnitude;
-
-            Vector3 sunDir = toSun / sunDistance;
-            Vector3 bodyDir = toBody / bodyDistance;
-
-            // If the sun is closer then the body cannot be in front of it
-            if (sunDistance < bodyDistance) return 0f;
-
-            // Ignore if body is not roughly in front of the sun
-            if (Vector3.Dot(sunDir, bodyDir) < 0.0f) return 0f;
-
-            float sunAngular = GetAngularRadius(SUN_RADIUS, sunDistance);
-            float bodyAngular = GetAngularRadius(bodyRadius, bodyDistance);
-
-            float separation = Mathf.Acos(Mathf.Clamp(Vector3.Dot(sunDir, bodyDir), -1f, 1f));
-
-            float overlap = CircleOverlap(sunAngular, bodyAngular, separation);
-
-            float sunArea = Mathf.PI * sunAngular * sunAngular;
-
-            return overlap / sunArea;
-        }
-
-        private float GetAngularRadius(float radius, float distance)
-        {
-            return Mathf.Asin(radius / distance);
-        }
-
-        float CircleOverlap(float r1, float r2, float d)
-        {
-            // No overlap
-            if (d >= r1 + r2) return 0f;
-
-            // One fully inside the other
-            if (d <= Mathf.Abs(r1 - r2))
+            foreach (var p in planets)
             {
-                float minR = Mathf.Min(r1, r2);
-                return Mathf.PI * minR * minR;
+                // Check that the planet is closer to the ship then the sun
+                float planetDistanceSqr = (p.pos - origin).sqrMagnitude;
+                if (planetDistanceSqr > rayMaxLengthSqr) continue;
+
+                // Check that the planet is roughly between the ship and the sun
+                float dot = Vector3.Dot(dir, (p.pos - origin).normalized);
+                if (dot < 0.0f) continue;
+
+                // Check if the ray intersects the planet
+                if (RayIntersectsSphere(origin, dir, p.pos, p.radius)) return true;
             }
 
-            float r1Sq = r1 * r1;
-            float r2Sq = r2 * r2;
+            return false;
+        }
 
-            float alpha = Mathf.Acos((d * d + r1Sq - r2Sq) / (2f * d * r1));
-            float beta = Mathf.Acos((d * d + r2Sq - r1Sq) / (2f * d * r2));
+        bool RayIntersectsSphere(Vector3 origin, Vector3 rayDir, Vector3 sphereCenter, float sphereRadius)
+        {
+            Vector3 sphereDir = (sphereCenter - origin).normalized;
 
-            float area =
-                r1Sq * alpha +
-                r2Sq * beta -
-                0.5f * Mathf.Sqrt(
-                    (-d + r1 + r2) *
-                    (d + r1 - r2) *
-                    (d - r1 + r2) *
-                    (d + r1 + r2)
-                );
+            // Get the cosine of the acute angle between the ray direction and sphere direction
+            float cosTheta = Mathf.Abs(Vector3.Dot(rayDir, sphereDir));
 
-            return area;
+            // Calculate the sin of the angle squared
+            float sinThetaSqr = 1.0f - cosTheta * cosTheta;
+
+            // Calculate the shortest distance squared from the ray to the center of the sphere
+            float distanceToRaySqr = sinThetaSqr * (sphereCenter - origin).sqrMagnitude;
+
+            // If the shortest distance is less than or equal to the sphere's radius, then it has intersected the sphere
+            return distanceToRaySqr <= sphereRadius * sphereRadius;
+        }
+
+        List<Vector3> GetSunSampleDirections(Vector3 sunPos, Vector3 observerPos)
+        {
+            List<Vector3> rayDirs = new List<Vector3>();
+
+            // Ray directly to sun
+            Vector3 sunDir = (sunPos - observerPos).normalized;
+            rayDirs.Add(sunDir);
+
+            // Calculate the right and up vectors for the rings around the sun direction
+            Vector3 right = Vector3.Cross(sunDir, Vector3.up).normalized;
+            // If the sun direction is parallel or close to the up vector, use a different vector to calculate the right vector
+            if (right.sqrMagnitude < 0.001f) right = Vector3.Cross(sunDir, Vector3.forward).normalized;
+
+            Vector3 up = Vector3.Cross(right, sunDir).normalized;
+
+            // Take samples for edge and central rings around the sun direction
+            int edgeRingSamples = 8;
+            int midRingSamples = 4;
+
+            float edgeRingAngleStep = 2 * Mathf.PI / edgeRingSamples;
+            float midRingAngleStep = 2 * Mathf.PI / midRingSamples;
+
+            // Edge ring 
+            for (int i = 0; i < edgeRingSamples; i++)
+            {
+                Vector3 edgePoint = Mathf.Cos(i * edgeRingAngleStep) * up + Mathf.Sin(i * edgeRingAngleStep) * right;
+                edgePoint.Normalize();
+
+                edgePoint = (edgePoint * SUN_RADIUS) + sunPos;
+
+                Vector3 pointDir = (edgePoint - observerPos).normalized;
+                rayDirs.Add(pointDir);
+            }
+
+            // Mid ring 
+            for (int i = 0; i < midRingSamples; i++)
+            {
+                Vector3 edgePoint = Mathf.Cos(i * midRingAngleStep) * up + Mathf.Sin(i * midRingAngleStep) * right;
+                edgePoint.Normalize();
+
+                edgePoint = (edgePoint * SUN_RADIUS * 0.5f) + sunPos;
+
+                Vector3 pointDir = (edgePoint - observerPos).normalized;
+                rayDirs.Add(pointDir);
+            }
+
+            return rayDirs;
         }
 
     }

@@ -14,6 +14,18 @@
         "Ultra"
       ],
       "tooltip": "Controls how much energy the ship's solar panels can produce"
+    },
+    "shipBatteryEfficiency": {
+      "title": "Ship Battery Efficiency",
+      "type": "selector",
+      "value": "Medium",
+      "options": [
+        "Low",
+        "Medium",
+        "High",
+        "Ultra"
+      ],
+      "tooltip": "Controls how much energy the battery can maintain over time"
     }
 
   }

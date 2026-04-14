@@ -54,11 +54,14 @@ namespace CleanEnergy
             if (solarPowerManager == null) return;
 
             string solarPowerEfficiency = config.GetSettingsValue<string>("solarPowerEfficiency");
-            solarPowerManager.UpdateSettings(solarPowerEfficiency);
+            string shipBatteryEfficiency = config.GetSettingsValue<string>("shipBatteryEfficiency");
+
+            solarPowerManager.UpdateSettings(solarPowerEfficiency, shipBatteryEfficiency);
         }
 
         IEnumerator WaitToSetupSolarPanels()
         {
+            // Wait a moment to ensure the ship's cockpit has been fully loaded into the scene
             yield return new WaitForSeconds(2.0f);
             SetupSolarPanels();
         }
@@ -75,9 +78,14 @@ namespace CleanEnergy
                 return;
             }
 
+            // Update the solar panel loader
+            SolarPanelLoader.SetModDirectoryPath(ModHelper.Manifest.ModFolderPath);
+            SolarPanelLoader.SetModConsole(ModHelper.Console);
+
             // Create the solar power manager and attach it to the ship's cockpit
             solarPowerManager = SolarPowerManager.Create(shipTransform, ModHelper.Console);
 
+            // Apply the current config settings
             StartCoroutine(WaitToUpdateSettings());
         }
 
@@ -87,7 +95,9 @@ namespace CleanEnergy
 
             // Apply the current config settings
             string solarPowerEfficiency = ModHelper.Config.GetSettingsValue<string>("solarPowerEfficiency");
-            solarPowerManager.UpdateSettings(solarPowerEfficiency);
+            string shipBatteryEfficiency = ModHelper.Config.GetSettingsValue<string>("shipBatteryEfficiency");
+
+            solarPowerManager.UpdateSettings(solarPowerEfficiency, shipBatteryEfficiency);
         }
 
     }
