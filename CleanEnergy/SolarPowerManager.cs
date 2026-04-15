@@ -69,8 +69,24 @@ namespace CleanEnergy
                 if (solarPanels != null)
                 {
                     solarPanels.transform.SetParent(shipCabin, false);
-                    solarPanels.transform.localPosition = new Vector3(0.0f, 0.0f, 0.0f);
+                    solarPanels.transform.localPosition = new Vector3(0.0f, -3.63f, 0.1f);
+                    solarPanels.transform.localRotation = Quaternion.Euler(0.0f, 270.0f, 0.0f);
+                    solarPanels.transform.localScale = new Vector3(2.3f, 2.3f, 2.3f);
                     solarPanels.SetActive(true);
+
+                    Transform frontPanels = solarPanels.transform.Find("Front Panels");
+
+                    //Transform solarPanelFrontRight = frontPanels.Find("Solar Panel Right");
+                    //solarPanelFrontRight.localPosition = new Vector3(-0.4f, 1.48f, 3.4f);
+                    //solarPanelFrontRight.localRotation = Quaternion.Euler(355.0f, 35.0f, 0.0f);
+                    //solarPanelFrontRight.transform.localScale = new Vector3(0.2288f, 0.2288f, 0.2288f);
+
+                    Transform backPanels = solarPanels.transform.Find("Back Panels");
+
+                    Transform solarPanelBackRight = backPanels.Find("Solar Panel Right");
+                    solarPanelBackRight.localPosition = new Vector3(-0.4f, 1.48f, 3.4f);
+                    solarPanelBackRight.localRotation = Quaternion.Euler(345.0f, 340.0f, 0.0f);
+                    solarPanelBackRight.transform.localScale = new Vector3(0.2288f, 0.2288f, 0.2288f);
                 }
                 else
                 {
@@ -154,19 +170,21 @@ namespace CleanEnergy
 
             // If the sun is visible, then generate fuel based on the distance to the sun and the solar power efficiency
             float sunSurfaceDistance = Math.Max(sunDistance - 3000.0f, 1.0f);
-            float sunToTimberHearthDistance = 8593.0f - 3000.0f;
+            float sunToGiantsDeepDistance = 16457.0f - 3000.0f;
 
             // Will have value of 1 when at Timber Hearth
-            float inverseSquareFalloff = sunToTimberHearthDistance * sunToTimberHearthDistance / (sunSurfaceDistance * sunSurfaceDistance);
+            float inverseSquareFalloff = sunToGiantsDeepDistance * sunToGiantsDeepDistance / (sunSurfaceDistance * sunSurfaceDistance);
 
             // The ship's battery should last 150 seconds without solar power
             float fuelDrainConstant = shipStartFuel / (150.0f * shipBatteryEfficiency);
             float fuelDrainRate = fuelDrainConstant * Time.deltaTime;
 
-            // The ship's battery should take 75 seconds to refuel at Timber Hearth
-            float fuelRefillConstant = shipStartFuel / 75.0f;
+            // At Timber Hearth's distance from the sun, the solar panels should take 100 seconds to fully recharge on medium efficiency
+            float fuelRefillConstant = shipStartFuel / 100.0f;
 
-            // At Timber Hearth's distance from the sun, the solar panels should take 75 seconds to fully recharge on medium efficiency
+            // The solar panels are mostly blocked by Giant's Deep's thick clouds
+            if (IsInGiantsDeep()) fuelRefillConstant *= 0.35f;
+
             float fuelRefillRate = 0.0f;
             if (sunBrightness > 0.0f) fuelRefillRate = solarPowerEfficiency * fuelRefillConstant * inverseSquareFalloff * Time.deltaTime;
 
@@ -201,6 +219,15 @@ namespace CleanEnergy
                 float sunOcclusionFraction = GetSunOcclusionFraction();
                 sunBrightness = 1.0f - sunOcclusionFraction;
             }
+        }
+
+        private bool IsInGiantsDeep()
+        {
+            Transform giantsDeep = Locator.GetAstroObject(AstroObject.Name.GiantsDeep).transform;
+            float distanceToGiantsDeep = Vector3.Distance(transform.position, giantsDeep.position);
+            float giantsDeepRadius = 1100.0f;
+
+            return distanceToGiantsDeep < giantsDeepRadius;
         }
 
         private float GetSunOcclusionFraction()

@@ -51,7 +51,10 @@ namespace CleanEnergy
                 string bundlePath = Path.Combine(modFolderPath, "Assets", platformFolder, "solarpanels");
                 AssetBundle bundle = AssetBundle.LoadFromFile(bundlePath);
 
-                GameObject solarPanels = bundle.LoadAsset<GameObject>("Solar Panel Holder");
+                GameObject prefab = bundle.LoadAsset<GameObject>("Solar Panel Holder");
+                GameObject solarPanels = GameObject.Instantiate(prefab);
+
+                solarPanels.transform.name = "Solar Panels";
 
                 return solarPanels;
             }
