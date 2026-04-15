@@ -74,19 +74,33 @@ namespace CleanEnergy
                     solarPanels.transform.localScale = new Vector3(2.3f, 2.3f, 2.3f);
                     solarPanels.SetActive(true);
 
+                    // Front Panels ----
                     Transform frontPanels = solarPanels.transform.Find("Front Panels");
+                    frontPanels.localPosition = new Vector3(0.0f, 0.0f, 0.0f);
+                    frontPanels.localRotation = Quaternion.Euler(270.0f, 0.0f, 0.0f);
+                    frontPanels.transform.localScale = new Vector3(1.0f, 1.0f, 1.0f);
 
-                    //Transform solarPanelFrontRight = frontPanels.Find("Solar Panel Right");
-                    //solarPanelFrontRight.localPosition = new Vector3(-0.4f, 1.48f, 3.4f);
-                    //solarPanelFrontRight.localRotation = Quaternion.Euler(355.0f, 35.0f, 0.0f);
-                    //solarPanelFrontRight.transform.localScale = new Vector3(0.2288f, 0.2288f, 0.2288f);
+                    Transform solarPanelFrontRight = frontPanels.Find("Solar Panel Right");
+                    solarPanelFrontRight.localPosition = new Vector3(1.55f, 0.0f, 3.3f);
+                    solarPanelFrontRight.localRotation = Quaternion.Euler(5.0f, 0.0f, 270.0f);
+                    solarPanelFrontRight.transform.localScale = new Vector3(0.2288f, 0.2288f, 0.2288f);
 
+                    Transform solarPanelFrontLeft = frontPanels.Find("Solar Panel Left");
+                    solarPanelFrontLeft.gameObject.SetActive(false);
+
+                    // Back Panels -----
                     Transform backPanels = solarPanels.transform.Find("Back Panels");
+                    backPanels.localPosition = new Vector3(0.0f, 0.0f, 0.0f);
+                    backPanels.localRotation = Quaternion.Euler(270.0f, 0.0f, 0.0f);
+                    backPanels.transform.localScale = new Vector3(1.0f, 1.0f, 1.0f);
 
                     Transform solarPanelBackRight = backPanels.Find("Solar Panel Right");
                     solarPanelBackRight.localPosition = new Vector3(-0.4f, 1.48f, 3.4f);
                     solarPanelBackRight.localRotation = Quaternion.Euler(345.0f, 340.0f, 0.0f);
                     solarPanelBackRight.transform.localScale = new Vector3(0.2288f, 0.2288f, 0.2288f);
+
+                    Transform solarPanelBackLeft = backPanels.Find("Solar Panel Left");
+                    solarPanelBackLeft.gameObject.SetActive(false);
                 }
                 else
                 {

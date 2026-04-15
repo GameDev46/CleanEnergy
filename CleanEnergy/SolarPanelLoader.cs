@@ -15,6 +15,9 @@ namespace CleanEnergy
         private static string modFolderPath = "";
         private static IModConsole modConsole;
 
+        private static AssetBundle solarPanelBundle;
+        private static GameObject solarPanelPrefab;
+
         public static void SetModDirectoryPath(string dirPath)
         {
             modFolderPath = dirPath;
@@ -29,31 +32,40 @@ namespace CleanEnergy
         {
             try
             {
-                string platformFolder = "";
-
-                switch (Application.platform)
+                if (solarPanelPrefab == null)
                 {
-                    case RuntimePlatform.WindowsPlayer:
-                    case RuntimePlatform.WindowsEditor:
-                        platformFolder = "Windows";
-                        break;
-                    case RuntimePlatform.LinuxPlayer:
-                        platformFolder = "Linux";
-                        break;
-                    case RuntimePlatform.OSXPlayer:
-                        platformFolder = "Mac";
-                        break;
-                    default:
-                        modConsole.WriteLine($"Unsupported platform: {Application.platform}", MessageType.Warning);
+                    string platformFolder = "";
+
+                    switch (Application.platform)
+                    {
+                        case RuntimePlatform.WindowsPlayer:
+                        case RuntimePlatform.WindowsEditor:
+                            platformFolder = "Windows";
+                            break;
+                        case RuntimePlatform.LinuxPlayer:
+                            platformFolder = "Linux";
+                            break;
+                        case RuntimePlatform.OSXPlayer:
+                            platformFolder = "Mac";
+                            break;
+                        default:
+                            modConsole.WriteLine($"Unsupported platform: {Application.platform}", MessageType.Warning);
+                            return null;
+                    }
+
+                    string bundlePath = Path.Combine(modFolderPath, "Assets", platformFolder, "solarpanels");
+                    solarPanelBundle = AssetBundle.LoadFromFile(bundlePath);
+
+                    if (solarPanelBundle == null)
+                    {
+                        modConsole.WriteLine("Failed to load solar panel AssetBundle", MessageType.Error);
                         return null;
+                    }
+
+                    solarPanelPrefab = solarPanelBundle.LoadAsset<GameObject>("Solar Panel Holder");
                 }
 
-                string bundlePath = Path.Combine(modFolderPath, "Assets", platformFolder, "solarpanels");
-                AssetBundle bundle = AssetBundle.LoadFromFile(bundlePath);
-
-                GameObject prefab = bundle.LoadAsset<GameObject>("Solar Panel Holder");
-                GameObject solarPanels = GameObject.Instantiate(prefab);
-
+                GameObject solarPanels = GameObject.Instantiate(solarPanelPrefab);
                 solarPanels.transform.name = "Solar Panels";
 
                 return solarPanels;
