@@ -34,12 +34,13 @@ namespace CleanEnergy
         private float sunBrightness = 0.0f;
 
         private Transform sunTransform;
-        private const float SUN_RADIUS = 2000.0f; // 4000 at the end of the loop
 
         private const float CHECK_OCCLUSION_INTERVAL = 1.0f;
         private float checkOcclusionTimer = 0.0f;
 
-        private float MAX_FUEL_REFILL_RATE = 1000.0f;
+        private float MAX_FUEL_REFILL_RATE = 333.3f;
+
+        private static GameObject solarPanels;
 
         public static SolarPowerManager Create(Transform ship, IModConsole modHelperConsole)
         {
@@ -64,7 +65,7 @@ namespace CleanEnergy
             if (shipCabin != null)
             {
                 // Load and attach the solar panels to the ship's cabin
-                GameObject solarPanels = SolarPanelLoader.LoadSolarPanels();
+                solarPanels = SolarPanelLoader.LoadSolarPanels();
 
                 if (solarPanels != null)
                 {
@@ -80,10 +81,10 @@ namespace CleanEnergy
                     frontPanels.localRotation = Quaternion.Euler(270.0f, 0.0f, 0.0f);
                     frontPanels.transform.localScale = new Vector3(1.0f, 1.0f, 1.0f);
 
-                    Transform solarPanelFrontRight = frontPanels.Find("Solar Panel Right");
-                    solarPanelFrontRight.localPosition = new Vector3(1.55f, 0.0f, 3.3f);
-                    solarPanelFrontRight.localRotation = Quaternion.Euler(5.0f, 0.0f, 270.0f);
-                    solarPanelFrontRight.transform.localScale = new Vector3(0.2288f, 0.2288f, 0.2288f);
+                    Transform aboveCockpitPanel = frontPanels.Find("Solar Panel Right");
+                    aboveCockpitPanel.localPosition = new Vector3(1.55f, 0.0f, 3.3f);
+                    aboveCockpitPanel.localRotation = Quaternion.Euler(5.0f, 0.0f, 270.0f);
+                    aboveCockpitPanel.transform.localScale = new Vector3(0.2288f, 0.2288f, 0.2288f);
 
                     Transform solarPanelFrontLeft = frontPanels.Find("Solar Panel Left");
                     solarPanelFrontLeft.gameObject.SetActive(false);
@@ -94,13 +95,15 @@ namespace CleanEnergy
                     backPanels.localRotation = Quaternion.Euler(270.0f, 0.0f, 0.0f);
                     backPanels.transform.localScale = new Vector3(1.0f, 1.0f, 1.0f);
 
-                    Transform solarPanelBackRight = backPanels.Find("Solar Panel Right");
-                    solarPanelBackRight.localPosition = new Vector3(-0.4f, 1.48f, 3.4f);
-                    solarPanelBackRight.localRotation = Quaternion.Euler(345.0f, 340.0f, 0.0f);
-                    solarPanelBackRight.transform.localScale = new Vector3(0.2288f, 0.2288f, 0.2288f);
+                    Transform backRightPanel = backPanels.Find("Solar Panel Right");
+                    backRightPanel.localPosition = new Vector3(-0.4f, 1.48f, 3.4f);
+                    backRightPanel.localRotation = Quaternion.Euler(345.0f, 340.0f, 0.0f);
+                    backRightPanel.transform.localScale = new Vector3(0.2288f, 0.2288f, 0.2288f);
 
-                    Transform solarPanelBackLeft = backPanels.Find("Solar Panel Left");
-                    solarPanelBackLeft.gameObject.SetActive(false);
+                    Transform backLeftPanel = backPanels.Find("Solar Panel Left");
+                    backLeftPanel.localPosition = new Vector3(-0.43f, -1.48f, 3.4f);
+                    backLeftPanel.localRotation = Quaternion.Euler(15.0f, 335.0f, 180.0f);
+                    backLeftPanel.transform.localScale = new Vector3(0.2288f, 0.2288f, 0.2288f);
                 }
                 else
                 {
@@ -119,10 +122,10 @@ namespace CleanEnergy
         public void Start()
         {
             // Max fuel refill rate is 1% of the starting fuel per second
-            MAX_FUEL_REFILL_RATE = shipStartFuel / 10.0f;
+            MAX_FUEL_REFILL_RATE = shipStartFuel / 30.0f;
         }
 
-        public void UpdateSettings(string solarEfficiency, string batteryEfficiency)
+        public void UpdateSettings(string solarEfficiency, string batteryEfficiency, bool solarPanelsEnabled, string solarPanelLayout)
         {
             switch (solarEfficiency)
             {
@@ -162,7 +165,61 @@ namespace CleanEnergy
                     return;
             }
 
-            modConsole.WriteLine($"Updated solar power generation strength to {solarEfficiency} and battery efficiency to {batteryEfficiency}", MessageType.Success);
+            // Enable / Disable solar panels
+            solarPanels.SetActive(solarPanelsEnabled);
+
+            // Get the solar panel transforms for updating the layout
+            Transform frontPanels = solarPanels.transform.Find("Front Panels");
+            Transform backPanels = solarPanels.transform.Find("Back Panels");
+
+            Transform aboveCockpitPanel = frontPanels.Find("Solar Panel Right");
+            //Transform solarPanelFrontLeft = frontPanels.Find("Solar Panel Left"); // Front left panel is always disabled
+            Transform backRightPanel = backPanels.Find("Solar Panel Right");
+            Transform backLeftPanel = backPanels.Find("Solar Panel Left");
+
+            switch (solarPanelLayout)
+            {
+                case "R Only":
+                    aboveCockpitPanel.gameObject.SetActive(false);
+                    backRightPanel.gameObject.SetActive(true);
+                    backLeftPanel.gameObject.SetActive(false);
+                    break;
+                case "L Only":
+                    aboveCockpitPanel.gameObject.SetActive(false);
+                    backRightPanel.gameObject.SetActive(false);
+                    backLeftPanel.gameObject.SetActive(true);
+                    break;
+                case "Cockpit Only":
+                    aboveCockpitPanel.gameObject.SetActive(true);
+                    backRightPanel.gameObject.SetActive(false);
+                    backLeftPanel.gameObject.SetActive(false);
+                    break;
+                case "R, L":
+                    aboveCockpitPanel.gameObject.SetActive(false);
+                    backRightPanel.gameObject.SetActive(true);
+                    backLeftPanel.gameObject.SetActive(true);
+                    break;
+                case "R, Cockpit":
+                    aboveCockpitPanel.gameObject.SetActive(true);
+                    backRightPanel.gameObject.SetActive(true);
+                    backLeftPanel.gameObject.SetActive(false);
+                    break;
+                case "L, Cockpit":
+                    aboveCockpitPanel.gameObject.SetActive(true);
+                    backRightPanel.gameObject.SetActive(false);
+                    backLeftPanel.gameObject.SetActive(true);
+                    break;
+                case "R, L, Cockpit":
+                    aboveCockpitPanel.gameObject.SetActive(true);
+                    backRightPanel.gameObject.SetActive(true);
+                    backLeftPanel.gameObject.SetActive(true);
+                    break;
+                default:
+                    modConsole.WriteLine($"Invalid solar panel layout: {solarPanelLayout}", MessageType.Error);
+                    return;
+            }
+
+            modConsole.WriteLine($"Updated settings: Generation strength: {solarEfficiency}, Battery Efficiency: {batteryEfficiency}, Solar Panels: {solarPanelsEnabled}, Solar Panel Layout: {solarPanelLayout}", MessageType.Success);
         }
 
         public void Update()
@@ -184,26 +241,24 @@ namespace CleanEnergy
 
             // If the sun is visible, then generate fuel based on the distance to the sun and the solar power efficiency
             float sunSurfaceDistance = Math.Max(sunDistance - 3000.0f, 1.0f);
-            float sunToGiantsDeepDistance = 16457.0f - 3000.0f;
+            float sunToGiantsDeepDistance = 15500.0f - 3000.0f;
 
-            // Will have value of 1 when at Timber Hearth
+            // Will have value of 1 when at Giant's Deep
             float inverseSquareFalloff = sunToGiantsDeepDistance * sunToGiantsDeepDistance / (sunSurfaceDistance * sunSurfaceDistance);
 
             // The ship's battery should last 150 seconds without solar power
             float fuelDrainConstant = shipStartFuel / (150.0f * shipBatteryEfficiency);
             float fuelDrainRate = fuelDrainConstant * Time.deltaTime;
 
-            // At Timber Hearth's distance from the sun, the solar panels should take 100 seconds to fully recharge on medium efficiency
+            // At Giant's Deep's distance from the sun, the solar panels should roughly have an equal recharge and drain rate
             float fuelRefillConstant = shipStartFuel / 100.0f;
-
-            // The solar panels are mostly blocked by Giant's Deep's thick clouds
-            if (IsInGiantsDeep()) fuelRefillConstant *= 0.35f;
-
-            float fuelRefillRate = 0.0f;
-            if (sunBrightness > 0.0f) fuelRefillRate = solarPowerEfficiency * fuelRefillConstant * inverseSquareFalloff * Time.deltaTime;
+            float fuelRefillRate = solarPowerEfficiency * fuelRefillConstant * inverseSquareFalloff * Time.deltaTime;
 
             // Prevent the fuel refill rate from exceeding the max fuel refill rate
             fuelRefillRate = Math.Min(fuelRefillRate, MAX_FUEL_REFILL_RATE);
+
+            // Sun brightness is directly proportional to the fuel refill rate
+            fuelRefillRate *= sunBrightness;
 
             // Update the ship's fuel
             float currentFuel = shipResourceManager.GetFuel();
@@ -230,28 +285,18 @@ namespace CleanEnergy
                 isSunVisible = Physics.Raycast(rayStartPosition, sunDirection, out hit) && hit.transform == sunTransform;
                 float sunDistance = Vector3.Distance(transform.position, sunTransform.position);*/
 
-                float sunOcclusionFraction = GetSunOcclusionFraction();
-                sunBrightness = 1.0f - sunOcclusionFraction;
+                sunBrightness = GetSunBrightnessFraction();
             }
         }
 
-        private bool IsInGiantsDeep()
-        {
-            Transform giantsDeep = Locator.GetAstroObject(AstroObject.Name.GiantsDeep).transform;
-            float distanceToGiantsDeep = Vector3.Distance(transform.position, giantsDeep.position);
-            float giantsDeepRadius = 1100.0f;
-
-            return distanceToGiantsDeep < giantsDeepRadius;
-        }
-
-        private float GetSunOcclusionFraction()
+        private float GetSunBrightnessFraction()
         {
             Vector3 shipPos = transform.position;
 
             Transform caveTwin = Locator.GetAstroObject(AstroObject.Name.CaveTwin).transform;   // Ember Twin
             float caveTwinRadius = 170.0f;
             Transform towerTwin = Locator.GetAstroObject(AstroObject.Name.TowerTwin).transform; // Ash Twin
-            float towerTwinRadius = 169.0f; // Need to add in way to deal with radius change during game
+            float towerTwinRadius = Locator.GetAstroObject(AstroObject.Name.TowerTwin)._sandLevelController?.GetRadius() ?? 169.0f; 
 
             Transform timberHearth = Locator.GetAstroObject(AstroObject.Name.TimberHearth).transform;
             float timberHearthRadius = 254.0f;
@@ -272,17 +317,20 @@ namespace CleanEnergy
             Transform comet = Locator.GetAstroObject(AstroObject.Name.Comet).transform;
             float cometRadius = 83.0f;
 
-            List<(Vector3 pos, float radius)> planets = new List<(Vector3 pos, float radius)>()
+            // Check if Timber Hearth is enabled, if not then disable solar panels and return a brightness of 1
+            if (!timberHearth.gameObject.activeInHierarchy) return 1.0f;
+
+            List<(Vector3 pos, float radius, int id)> planets = new List<(Vector3 pos, float radius, int id)>()
             {
-                (caveTwin.position, caveTwinRadius),
-                (towerTwin.position, towerTwinRadius),
-                (timberHearth.position, timberHearthRadius),
-                (attlerock.position, attlerockRadius),
-                (brittleHollow.position, brittleHollowRadius),
-                (volcanicMoon.position, volcanicMoonRadius),
-                (giantsDeep.position, giantsDeepRadius),
-                (darkBramble.position, darkBrambleRadius),
-                (comet.position, cometRadius)
+                (caveTwin.position, caveTwinRadius, 1),
+                (towerTwin.position, towerTwinRadius, 2),
+                (timberHearth.position, timberHearthRadius, 3),
+                (attlerock.position, attlerockRadius, 4),
+                (brittleHollow.position, brittleHollowRadius, 5),
+                (volcanicMoon.position, volcanicMoonRadius, 6),
+                (giantsDeep.position, giantsDeepRadius, 7),
+                (darkBramble.position, darkBrambleRadius, 8),
+                (comet.position, cometRadius, 9)
             };
 
             List<Vector3> sunSampleDirections = GetSunSampleDirections(sunTransform.position, shipPos);
@@ -294,11 +342,37 @@ namespace CleanEnergy
             }
 
             float occlusion = (float)occludedSamples / sunSampleDirections.Count;
+            float brightness = 1.0f - occlusion;
 
-            return occlusion;
+            foreach (var p in planets)
+            {
+                // If the player is inside the planet sphere then aproximate brightness based on the planet and depth
+                float normalisedDistance = (p.pos - shipPos).sqrMagnitude / (p.radius * p.radius);
+                if (normalisedDistance <= 1.0f) brightness *= GetPlanetDepthBasedBrightness(normalisedDistance, p.id);
+            }
+
+            modConsole.WriteLine($"Sun Brightness: {brightness * 100.0f}%", MessageType.Info);
+            return brightness;
         }
 
-        bool IsSampleOccluded(Vector3 origin, Vector3 dir, List<(Vector3 pos, float radius)> planets)
+        float GetPlanetDepthBasedBrightness(float normDist, int planetId)
+        {
+            switch (planetId) 
+            {
+                case 1: return normDist;                        // Cave Twin (Ember Twin)
+                case 2: return 1.0f;                            // Tower Twin (Ash Twin)
+                case 3: return normDist;                        // Timber Hearth
+                case 4: return normDist;                        // Attlerock
+                case 5: return normDist > 0.8f ? 1.0f : 0.0f;   // Brittle Hollow
+                case 6: return 1.0f;                            // Volcanic Moon
+                case 7: return normDist > 0.95f ? 1.0f : 0.1f;  // Giant's Deep
+                case 8: return 1.0f;                            // Dark Bramble
+                case 9: return 1.0f;                            // Comet
+                default: return 1.0f;
+            }
+        }
+
+        bool IsSampleOccluded(Vector3 origin, Vector3 dir, List<(Vector3 pos, float radius, int id)> planets)
         {
             float rayMaxLengthSqr = (sunTransform.position - origin).sqrMagnitude;
 
@@ -340,6 +414,9 @@ namespace CleanEnergy
         {
             List<Vector3> rayDirs = new List<Vector3>();
 
+            // Get the current radius of the sun
+            float sunRadius = Locator.GetSunController()?.GetSurfaceRadius() ?? 2000.0f;
+
             // Ray directly to sun
             Vector3 sunDir = (sunPos - observerPos).normalized;
             rayDirs.Add(sunDir);
@@ -364,7 +441,7 @@ namespace CleanEnergy
                 Vector3 edgePoint = Mathf.Cos(i * edgeRingAngleStep) * up + Mathf.Sin(i * edgeRingAngleStep) * right;
                 edgePoint.Normalize();
 
-                edgePoint = (edgePoint * SUN_RADIUS) + sunPos;
+                edgePoint = (edgePoint * sunRadius) + sunPos;
 
                 Vector3 pointDir = (edgePoint - observerPos).normalized;
                 rayDirs.Add(pointDir);
@@ -376,7 +453,7 @@ namespace CleanEnergy
                 Vector3 edgePoint = Mathf.Cos(i * midRingAngleStep) * up + Mathf.Sin(i * midRingAngleStep) * right;
                 edgePoint.Normalize();
 
-                edgePoint = (edgePoint * SUN_RADIUS * 0.5f) + sunPos;
+                edgePoint = (edgePoint * sunRadius * 0.5f) + sunPos;
 
                 Vector3 pointDir = (edgePoint - observerPos).normalized;
                 rayDirs.Add(pointDir);

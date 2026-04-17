@@ -26,6 +26,34 @@
         "Ultra"
       ],
       "tooltip": "Controls how much energy the battery can maintain over time"
+    },
+    "powerSeparator": {
+      "type": "separator"
+    },
+    "solarPanelsEnabled": {
+      "title": "Solar Panels",
+      "type": "selector",
+      "value": "Enabled",
+      "options": [
+        "Enabled",
+        "Disabled"
+      ],
+      "tooltip": "Controls whether the solar panels are enabled or disabled"
+    },
+    "solarPanelLayout": {
+      "title": "Solar Panel Layout",
+      "type": "selector",
+      "value": "R, L, Cockpit",
+      "options": [
+        "R Only",
+        "L Only",
+        "Cockpit Only",
+        "R, L",
+        "R, Cockpit",
+        "L, Cockpit",
+        "R, L, Cockpit"
+      ],
+      "tooltip": "Controls the layout of the solar panels on the ship (R = Right, L = Left, Cockpit = Above Cockpit)"
     }
 
   }

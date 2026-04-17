@@ -56,7 +56,10 @@ namespace CleanEnergy
             string solarPowerEfficiency = config.GetSettingsValue<string>("solarPowerEfficiency");
             string shipBatteryEfficiency = config.GetSettingsValue<string>("shipBatteryEfficiency");
 
-            solarPowerManager.UpdateSettings(solarPowerEfficiency, shipBatteryEfficiency);
+            bool solarPanelsEnabled = config.GetSettingsValue<string>("solarPanelsEnabled") == "Enabled";
+            string solarPanelLayout = config.GetSettingsValue<string>("solarPanelLayout");
+
+            solarPowerManager.UpdateSettings(solarPowerEfficiency, shipBatteryEfficiency, solarPanelsEnabled, solarPanelLayout);
         }
 
         IEnumerator WaitToSetupSolarPanels()
@@ -97,7 +100,10 @@ namespace CleanEnergy
             string solarPowerEfficiency = ModHelper.Config.GetSettingsValue<string>("solarPowerEfficiency");
             string shipBatteryEfficiency = ModHelper.Config.GetSettingsValue<string>("shipBatteryEfficiency");
 
-            solarPowerManager.UpdateSettings(solarPowerEfficiency, shipBatteryEfficiency);
+            bool solarPanelsEnabled = ModHelper.Config.GetSettingsValue<string>("solarPanelsEnabled") == "Enabled";
+            string solarPanelLayout = ModHelper.Config.GetSettingsValue<string>("solarPanelLayout");
+
+            solarPowerManager.UpdateSettings(solarPowerEfficiency, shipBatteryEfficiency, solarPanelsEnabled, solarPanelLayout);
         }
 
     }
