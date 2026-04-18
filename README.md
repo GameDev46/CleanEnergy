@@ -18,7 +18,7 @@ However, in [New Horizon's](https://outerwildsmods.com/mods/newhorizons/) system
 
 ## Settings
 
-* The solar panel's efficiency (how fast the battery charges) can be changed in settings to be either Low, Medium, High or Ultra.
-* The battery's efficiency (how well the battery maintains charge) can be changed to be either Low, Medium, High or Ultra.
+* The solar panel's efficiency (how fast the battery charges) can be changed in settings to be either Very Low, Low, Medium (default), High or Ultra.
+* The battery's efficiency (how well the battery maintains charge) can be changed to be either Very Low, Low, Medium (default), High or Ultra.
 * The solar panel decorations for the ship can be enabled or disabled as well as set to 1 of 7 layouts
 
