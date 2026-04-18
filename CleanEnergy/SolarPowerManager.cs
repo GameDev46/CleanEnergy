@@ -131,6 +131,9 @@ namespace CleanEnergy
         {
             switch (solarEfficiency)
             {
+                case "Very Low":
+                    solarPowerEfficiency = 0.25f;
+                    break;
                 case "Low":
                     solarPowerEfficiency = 0.5f;
                     break;
@@ -150,6 +153,9 @@ namespace CleanEnergy
 
             switch (batteryEfficiency)
             {
+                case "Very Low":
+                    shipBatteryEfficiency = 0.25f;
+                    break;
                 case "Low":
                     shipBatteryEfficiency = 0.5f;
                     break;
@@ -372,7 +378,7 @@ namespace CleanEnergy
                 case 4: return normDist;                        // Attlerock
                 case 5: return normDist > 0.8f ? 1.0f : 0.0f;   // Brittle Hollow
                 case 6: return 1.0f;                            // Volcanic Moon
-                case 7: return normDist > 0.95f ? 1.0f : 0.1f;  // Giant's Deep
+                case 7: return normDist > 0.95f ? 1.0f : 0.05f; // Giant's Deep
                 case 8: return 1.0f;                            // Dark Bramble
                 case 9: return 1.0f;                            // Comet
                 default: return 1.0f;

@@ -8,6 +8,7 @@
       "type": "selector",
       "value": "Medium",
       "options": [
+        "Very Low",
         "Low",
         "Medium",
         "High",
@@ -20,6 +21,7 @@
       "type": "selector",
       "value": "Medium",
       "options": [
+        "Very Low",
         "Low",
         "Medium",
         "High",
