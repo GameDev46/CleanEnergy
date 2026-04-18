@@ -38,9 +38,11 @@ namespace CleanEnergy
         private const float CHECK_OCCLUSION_INTERVAL = 1.0f;
         private float checkOcclusionTimer = 0.0f;
 
-        private float MAX_FUEL_REFILL_RATE = 333.3f;
+        private float MAX_FUEL_REFILL_RATE = 200.0f;
 
         private static GameObject solarPanels;
+
+        private bool isInOWUniverse = true;
 
         public static SolarPowerManager Create(Transform ship, IModConsole modHelperConsole)
         {
@@ -122,7 +124,7 @@ namespace CleanEnergy
         public void Start()
         {
             // Max fuel refill rate is 1% of the starting fuel per second
-            MAX_FUEL_REFILL_RATE = shipStartFuel / 30.0f;
+            MAX_FUEL_REFILL_RATE = shipStartFuel / 50.0f;
         }
 
         public void UpdateSettings(string solarEfficiency, string batteryEfficiency, bool solarPanelsEnabled, string solarPanelLayout)
@@ -241,7 +243,7 @@ namespace CleanEnergy
 
             // If the sun is visible, then generate fuel based on the distance to the sun and the solar power efficiency
             float sunSurfaceDistance = Math.Max(sunDistance - 3000.0f, 1.0f);
-            float sunToGiantsDeepDistance = 15500.0f - 3000.0f;
+            float sunToGiantsDeepDistance = 13000.0f - 3000.0f;
 
             // Will have value of 1 when at Giant's Deep
             float inverseSquareFalloff = sunToGiantsDeepDistance * sunToGiantsDeepDistance / (sunSurfaceDistance * sunSurfaceDistance);
@@ -259,10 +261,10 @@ namespace CleanEnergy
 
             // Sun brightness is directly proportional to the fuel refill rate
             fuelRefillRate *= sunBrightness;
-
+                
             // Update the ship's fuel
             float currentFuel = shipResourceManager.GetFuel();
-            shipResourceManager.SetFuel(currentFuel + fuelRefillRate - fuelDrainRate);
+            if (isInOWUniverse) shipResourceManager.SetFuel(currentFuel + fuelRefillRate - fuelDrainRate);
 
             // Increase the sun occlusion timer
             checkOcclusionTimer += Time.deltaTime;
@@ -296,16 +298,16 @@ namespace CleanEnergy
             Transform caveTwin = Locator.GetAstroObject(AstroObject.Name.CaveTwin).transform;   // Ember Twin
             float caveTwinRadius = 170.0f;
             Transform towerTwin = Locator.GetAstroObject(AstroObject.Name.TowerTwin).transform; // Ash Twin
-            float towerTwinRadius = Locator.GetAstroObject(AstroObject.Name.TowerTwin)._sandLevelController?.GetRadius() ?? 169.0f; 
+            float towerTwinRadius = Locator.GetAstroObject(AstroObject.Name.TowerTwin)._sandLevelController?.GetRadius() ?? 169.0f;
 
             Transform timberHearth = Locator.GetAstroObject(AstroObject.Name.TimberHearth).transform;
             float timberHearthRadius = 254.0f;
-            Transform attlerock = Locator.GetAstroObject(AstroObject.Name.TimberMoon).transform;
+            Transform attlerock = Locator.GetAstroObject(AstroObject.Name.TimberHearth)._moon.transform;
             float attlerockRadius = 80.0f;
 
             Transform brittleHollow = Locator.GetAstroObject(AstroObject.Name.BrittleHollow).transform;
             float brittleHollowRadius = 272.0f;
-            Transform volcanicMoon = Locator.GetAstroObject(AstroObject.Name.VolcanicMoon).transform;
+            Transform volcanicMoon = Locator.GetAstroObject(AstroObject.Name.BrittleHollow)._moon.transform;
             float volcanicMoonRadius = 97.3f;
 
             Transform giantsDeep = Locator.GetAstroObject(AstroObject.Name.GiantsDeep).transform;
@@ -318,7 +320,13 @@ namespace CleanEnergy
             float cometRadius = 83.0f;
 
             // Check if Timber Hearth is enabled, if not then disable solar panels and return a brightness of 1
-            if (!timberHearth.gameObject.activeInHierarchy) return 1.0f;
+            if (!timberHearth.gameObject.activeInHierarchy)
+            {
+                isInOWUniverse = false;
+                return 1.0f;
+            }
+
+            isInOWUniverse = true;
 
             List<(Vector3 pos, float radius, int id)> planets = new List<(Vector3 pos, float radius, int id)>()
             {
@@ -351,7 +359,6 @@ namespace CleanEnergy
                 if (normalisedDistance <= 1.0f) brightness *= GetPlanetDepthBasedBrightness(normalisedDistance, p.id);
             }
 
-            modConsole.WriteLine($"Sun Brightness: {brightness * 100.0f}%", MessageType.Info);
             return brightness;
         }
 
