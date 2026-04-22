@@ -44,8 +44,6 @@ namespace CleanEnergy
 
         private static GameObject solarPanels;
 
-        private bool isInOWUniverse = true;
-
         public static SolarPowerManager Create(Transform ship, IModConsole modHelperConsole)
         {
             ShipResources shipResources = ship.GetComponent<ShipResources>();
@@ -282,7 +280,7 @@ namespace CleanEnergy
                 
             // Update the ship's fuel
             float currentFuel = shipResourceManager.GetFuel();
-            if (isInOWUniverse) shipResourceManager.SetFuel(currentFuel + fuelRefillRate - fuelDrainRate);
+            shipResourceManager.SetFuel(currentFuel + fuelRefillRate - fuelDrainRate);
 
             // Increase the sun occlusion timer
             checkOcclusionTimer += Time.deltaTime;
@@ -342,15 +340,6 @@ namespace CleanEnergy
 
             Transform comet = Locator.GetAstroObject(AstroObject.Name.Comet).transform;
             float cometRadius = 83.0f;
-
-            // Check if Timber Hearth is enabled, if not then disable solar panels and return a brightness of 1
-            if (!timberHearth.gameObject.activeInHierarchy)
-            {
-                isInOWUniverse = false;
-                return 1.0f;
-            }
-
-            isInOWUniverse = true;
 
             List<(Vector3 pos, float radius, int id)> planets = new List<(Vector3 pos, float radius, int id)>()
             {
