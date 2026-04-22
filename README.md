@@ -4,6 +4,8 @@
 
 <hr>
 
+[![Install Clean Energy](https://img.shields.io/endpoint?url=https%3A%2F%2Fouterwildsmods.com%2Fapi%2FGameDev46.CleanEnergy%2Fbadge.json)](https://outerwildsmods.com/mods/cleanenergy/)
+
 ## Info
 
 With Climate Change becoming an ever present issue, the Hearthians decided it was time to go green. Their first step was to replace your ship's fuel with much more environmentally friendly solar power!

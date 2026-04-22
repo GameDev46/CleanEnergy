@@ -31,7 +31,8 @@ namespace CleanEnergy
         private float shipBatteryEfficiency = 1.0f;
 
         // Player starts off on the dark side of Timber Hearth
-        private float sunlight = 0.0f;
+        private Transform brightestSun;
+        private float brightestSunSunlight = 0.0f;
         private SunController[] sunControllers;
 
         private bool shouldUseSolarPanels = true;
@@ -129,6 +130,9 @@ namespace CleanEnergy
 
             // Get all the active suns in the scene
             sunControllers = GameObject.FindObjectsOfType<SunController>();
+
+            brightestSunSunlight = sunControllers.Length > 0 ? GetSunBrightnessFraction(sunControllers[0].transform) : 0.0f;
+            brightestSun = sunControllers.Length > 0 ? sunControllers[0].transform : null;
         }
 
         public void UpdateSettings(bool solarPanelsUsed, string solarEfficiency, string batteryEfficiency, bool solarPanelsEnabled, string solarPanelLayout)
@@ -253,8 +257,7 @@ namespace CleanEnergy
             //shipResourceManager.SetFuel(0.0f);
 
             // Get the distance between the ship and the sun
-            Transform sunTransform = Locator.GetSunTransform();
-            float sunDistance = Vector3.Distance(transform.position, sunTransform.position);
+            float sunDistance = brightestSun == null ? 10000.0f : Vector3.Distance(transform.position, brightestSun.position);
 
             // If the sun is visible, then generate fuel based on the distance to the sun and the solar power efficiency
             float sunSurfaceDistance = Math.Max(sunDistance - 3000.0f, 1.0f);
@@ -275,7 +278,7 @@ namespace CleanEnergy
             fuelRefillRate = Math.Min(fuelRefillRate, MAX_FUEL_REFILL_RATE);
 
             // Sun brightness is directly proportional to the fuel refill rate
-            fuelRefillRate *= sunlight;
+            fuelRefillRate *= brightestSunSunlight;
                 
             // Update the ship's fuel
             float currentFuel = shipResourceManager.GetFuel();
@@ -290,7 +293,25 @@ namespace CleanEnergy
                 // Reset the timer
                 checkOcclusionTimer = 0.0f;
 
-                sunlight = GetSunBrightnessFraction(sunTransform);
+                float bestSunSunlight = 0.0f;
+                Transform bestSun = null;
+
+                foreach (SunController sunController in sunControllers)
+                {
+                    // Skip null sun controllers
+                    if (sunController == null) continue;
+
+                    float sunBrightness = GetSunBrightnessFraction(sunController.transform);
+
+                    if (sunBrightness > bestSunSunlight)
+                    {
+                        bestSunSunlight = sunBrightness;
+                        bestSun = sunController.transform;
+                    }
+                }
+
+                brightestSunSunlight = bestSun == null ? 0.0f : bestSunSunlight;
+                brightestSun = bestSun;
             }
         }
 
