@@ -31,9 +31,10 @@ namespace CleanEnergy
         private float shipBatteryEfficiency = 1.0f;
 
         // Player starts off on the dark side of Timber Hearth
-        private float sunBrightness = 0.0f;
+        private float sunlight = 0.0f;
+        private SunController[] sunControllers;
 
-        private Transform sunTransform;
+        private bool shouldUseSolarPanels = true;
 
         private const float CHECK_OCCLUSION_INTERVAL = 1.0f;
         private float checkOcclusionTimer = 0.0f;
@@ -125,10 +126,15 @@ namespace CleanEnergy
         {
             // Max fuel refill rate is 1% of the starting fuel per second
             MAX_FUEL_REFILL_RATE = shipStartFuel / 50.0f;
+
+            // Get all the active suns in the scene
+            sunControllers = GameObject.FindObjectsOfType<SunController>();
         }
 
-        public void UpdateSettings(string solarEfficiency, string batteryEfficiency, bool solarPanelsEnabled, string solarPanelLayout)
+        public void UpdateSettings(bool solarPanelsUsed, string solarEfficiency, string batteryEfficiency, bool solarPanelsEnabled, string solarPanelLayout)
         {
+            shouldUseSolarPanels = solarPanelsUsed;
+
             switch (solarEfficiency)
             {
                 case "Very Low":
@@ -232,6 +238,9 @@ namespace CleanEnergy
 
         public void Update()
         {
+            // If solar panels are not being used, then skip all the solar power calculations
+            if (!shouldUseSolarPanels) return;
+
             // Sun              3000
             // Twins            360
             // Timber Hearth    450   
@@ -244,7 +253,7 @@ namespace CleanEnergy
             //shipResourceManager.SetFuel(0.0f);
 
             // Get the distance between the ship and the sun
-            sunTransform = Locator.GetSunTransform();
+            Transform sunTransform = Locator.GetSunTransform();
             float sunDistance = Vector3.Distance(transform.position, sunTransform.position);
 
             // If the sun is visible, then generate fuel based on the distance to the sun and the solar power efficiency
@@ -266,7 +275,7 @@ namespace CleanEnergy
             fuelRefillRate = Math.Min(fuelRefillRate, MAX_FUEL_REFILL_RATE);
 
             // Sun brightness is directly proportional to the fuel refill rate
-            fuelRefillRate *= sunBrightness;
+            fuelRefillRate *= sunlight;
                 
             // Update the ship's fuel
             float currentFuel = shipResourceManager.GetFuel();
@@ -281,23 +290,11 @@ namespace CleanEnergy
                 // Reset the timer
                 checkOcclusionTimer = 0.0f;
 
-                // Raycast to the sun and get the distance to it and whether it is currently visible from the ship
-                /*RaycastHit hit;
-
-                Transform sunTransform = Locator.GetSunTransform();
-                Vector3 sunDirection = (sunTransform.position - transform.position).normalized;
-
-                // Prevent the ray from starting inside the ship
-                Vector3 rayStartPosition = transform.position + sunDirection * 10.0f;
-
-                isSunVisible = Physics.Raycast(rayStartPosition, sunDirection, out hit) && hit.transform == sunTransform;
-                float sunDistance = Vector3.Distance(transform.position, sunTransform.position);*/
-
-                sunBrightness = GetSunBrightnessFraction();
+                sunlight = GetSunBrightnessFraction(sunTransform);
             }
         }
 
-        private float GetSunBrightnessFraction()
+        private float GetSunBrightnessFraction(Transform sunTransform)
         {
             Vector3 shipPos = transform.position;
 
@@ -352,7 +349,7 @@ namespace CleanEnergy
 
             foreach (Vector3 dir in sunSampleDirections) 
             {
-                if (IsSampleOccluded(shipPos, dir, planets)) occludedSamples++;
+                if (IsSampleOccluded(sunTransform.position, shipPos, dir, planets)) occludedSamples++;
             }
 
             float occlusion = (float)occludedSamples / sunSampleDirections.Count;
@@ -385,9 +382,9 @@ namespace CleanEnergy
             }
         }
 
-        bool IsSampleOccluded(Vector3 origin, Vector3 dir, List<(Vector3 pos, float radius, int id)> planets)
+        bool IsSampleOccluded(Vector3 sunPos, Vector3 origin, Vector3 dir, List<(Vector3 pos, float radius, int id)> planets)
         {
-            float rayMaxLengthSqr = (sunTransform.position - origin).sqrMagnitude;
+            float rayMaxLengthSqr = (sunPos - origin).sqrMagnitude;
 
             foreach (var p in planets)
             {

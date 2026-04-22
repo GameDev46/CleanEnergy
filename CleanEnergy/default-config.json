@@ -3,6 +3,19 @@
   "enabled": true,
   "settings": {
 
+    "solarPowerUsed": {
+      "title": "Use Solar Power",
+      "type": "selector",
+      "value": "Yes",
+      "options": [
+        "Yes",
+        "No"
+      ],
+      "tooltip": "Controls whether the ship uses solar power"
+    },
+    "solarPowerSeparator": {
+      "type": "separator"
+    },
     "solarPowerEfficiency": {
       "title": "Solar Panel Efficiency",
       "type": "selector",
@@ -33,14 +46,14 @@
       "type": "separator"
     },
     "solarPanelsEnabled": {
-      "title": "Solar Panels",
+      "title": "Solar Panel Models",
       "type": "selector",
       "value": "Enabled",
       "options": [
         "Enabled",
         "Disabled"
       ],
-      "tooltip": "Controls whether the solar panels are enabled or disabled"
+      "tooltip": "Controls whether the solar panel models are enabled or disabled"
     },
     "solarPanelLayout": {
       "title": "Solar Panel Layout",
