@@ -33,7 +33,9 @@ namespace CleanEnergy
         // Player starts off on the dark side of Timber Hearth
         private Transform brightestSun;
         private float brightestSunSunlight = 0.0f;
-        private SunController[] sunControllers;
+        private List<GameObject> sunControllerHolders = new List<GameObject>();
+
+        private List<ProxyBody> planetProxies = new List<ProxyBody>();
 
         private bool shouldUseSolarPanels = true;
 
@@ -124,13 +126,86 @@ namespace CleanEnergy
         public void Start()
         {
             // Max fuel refill rate is 1% of the starting fuel per second
-            MAX_FUEL_REFILL_RATE = shipStartFuel / 50.0f;
+            MAX_FUEL_REFILL_RATE = shipStartFuel / 40.0f;
 
             // Get all the active suns in the scene
-            sunControllers = GameObject.FindObjectsOfType<SunController>();
+            UpdateSunControllers();
 
-            brightestSunSunlight = sunControllers.Length > 0 ? GetSunBrightnessFraction(sunControllers[0].transform) : 0.0f;
-            brightestSun = sunControllers.Length > 0 ? sunControllers[0].transform : null;
+            brightestSunSunlight = sunControllerHolders.Count > 0 ? GetSunBrightnessFraction(sunControllerHolders[0]) : 0.0f;
+            brightestSun = sunControllerHolders.Count > 0 ? sunControllerHolders[0].transform : null;
+
+            // Get all the planet proxies in the scene
+            UpdatePlanetProxies();
+        }
+
+        private void UpdateSunControllers()
+        {
+            // Clear the current sun controllers list
+            sunControllerHolders = new List<GameObject>();
+
+            // Locate and add all the sun controllers in the scene to the sun controllers list
+            SunController[] controllers = GameObject.FindObjectsOfType<SunController>();
+            foreach (SunController controller in controllers)
+            {
+                // Skip if the controller is part of the ship
+                Transform controllerTransform = controller.transform;
+                if (controllerTransform.IsChildOf(transform)) continue;
+
+                // Skip if the controller is part of a proxy body
+                Transform holder = controllerTransform?.parent?.parent;
+                if (holder != null && holder.gameObject.GetComponent<ProxyBody>() != null) continue;
+
+                sunControllerHolders.Add(controllerTransform.gameObject);
+                modConsole.WriteLine($"Added sun controller: {controllerTransform.name}", MessageType.Info);
+            }
+
+            // Attempt to locate the New Horizons StarEvolutionController component at runtime
+            Type nhStarControllerType = AppDomain.CurrentDomain
+            .GetAssemblies()
+            .SelectMany(a => a.GetTypes())
+            .FirstOrDefault(t => t.Name == "StarEvolutionController");
+
+            if (nhStarControllerType != null)
+            {
+                // Grab all NHProxy instances
+                var nhStarControllers = GameObject.FindObjectsOfType(nhStarControllerType);
+
+                foreach (var controller in nhStarControllers)
+                {
+                    // Skip if the controller is part of the ship
+                    Transform controllerTransform = ((Component)controller).transform;
+                    if (controllerTransform.IsChildOf(transform)) continue;
+
+                    // Skip if the controller is part of a proxy body
+                    Transform holder = controllerTransform?.parent?.parent;
+                    if (holder != null && holder.gameObject.GetComponent<ProxyBody>() != null) continue;
+
+                    sunControllerHolders.Add(controllerTransform.gameObject);
+                    modConsole.WriteLine($"Added NH sun controller: {(holder == null ? controllerTransform.name : holder.name)}", MessageType.Info);
+                }
+            }
+        }
+
+        private void UpdatePlanetProxies()
+        {
+            // Clear the current planet proxies list
+            planetProxies = new List<ProxyBody>();
+
+            // Locate and add all the proxy bodies in the scene to the planet proxies list
+            ProxyBody[] proxies = GameObject.FindObjectsOfType<ProxyBody>();
+            foreach (ProxyBody proxy in proxies)
+            {
+                bool isPlanet = proxy is ProxyPlanet;
+                bool isComet = proxy is ProxyComet;
+                if (!isPlanet && !isComet) continue;
+
+                bool isStar = proxy._realObjectTransform?.gameObject?.GetComponent<AstroObject>()?._type == AstroObject.Type.Star;
+                if (isStar) continue;
+
+                planetProxies.Add(proxy);
+
+                modConsole.WriteLine($"Added planet proxy: {proxy.name}", MessageType.Info);
+            }
         }
 
         public void UpdateSettings(bool solarPanelsUsed, string solarEfficiency, string batteryEfficiency, bool solarPanelsEnabled, string solarPanelLayout)
@@ -273,7 +348,7 @@ namespace CleanEnergy
             float fuelRefillRate = solarPowerEfficiency * fuelRefillConstant * inverseSquareFalloff * Time.deltaTime;
 
             // Prevent the fuel refill rate from exceeding the max fuel refill rate
-            fuelRefillRate = Math.Min(fuelRefillRate, MAX_FUEL_REFILL_RATE);
+            fuelRefillRate = Math.Min(fuelRefillRate, MAX_FUEL_REFILL_RATE * Time.deltaTime);
 
             // Sun brightness is directly proportional to the fuel refill rate
             fuelRefillRate *= brightestSunSunlight;
@@ -291,75 +366,121 @@ namespace CleanEnergy
                 // Reset the timer
                 checkOcclusionTimer = 0.0f;
 
-                float bestSunSunlight = 0.0f;
+                float closestSunDistanceSqr = float.MaxValue;
                 Transform bestSun = null;
 
-                foreach (SunController sunController in sunControllers)
+                foreach (GameObject sunController in sunControllerHolders)
                 {
                     // Skip null sun controllers
                     if (sunController == null) continue;
 
-                    float sunBrightness = GetSunBrightnessFraction(sunController.transform);
+                    float currentSunDistanceSqr = Vector3.SqrMagnitude(transform.position - sunController.transform.position);
 
-                    if (sunBrightness > bestSunSunlight)
+                    if (closestSunDistanceSqr > currentSunDistanceSqr)
                     {
-                        bestSunSunlight = sunBrightness;
+                        closestSunDistanceSqr = currentSunDistanceSqr;
                         bestSun = sunController.transform;
                     }
                 }
 
-                brightestSunSunlight = bestSun == null ? 0.0f : bestSunSunlight;
+                brightestSunSunlight = bestSun == null ? 0.0f : GetSunBrightnessFraction(bestSun.gameObject);
                 brightestSun = bestSun;
+
+                //modConsole.WriteLine($"Brightest Sun Distance: {Vector3.Distance(transform.position, brightestSun.position)}", MessageType.Info);
             }
         }
 
-        private float GetSunBrightnessFraction(Transform sunTransform)
+        private float GetSunBrightnessFraction(GameObject sunController)
         {
             Vector3 shipPos = transform.position;
+            Vector3 sunPos = sunController.transform.position;
 
-            Transform caveTwin = Locator.GetAstroObject(AstroObject.Name.CaveTwin).transform;   // Ember Twin
-            float caveTwinRadius = 170.0f;
-            Transform towerTwin = Locator.GetAstroObject(AstroObject.Name.TowerTwin).transform; // Ash Twin
-            float towerTwinRadius = Locator.GetAstroObject(AstroObject.Name.TowerTwin)._sandLevelController?.GetRadius() ?? 169.0f;
+            List<(Vector3 pos, float radius, int id)> planets = new List<(Vector3 pos, float radius, int id)>();
 
-            Transform timberHearth = Locator.GetAstroObject(AstroObject.Name.TimberHearth).transform;
-            float timberHearthRadius = 254.0f;
-            Transform attlerock = Locator.GetAstroObject(AstroObject.Name.TimberHearth)._moon.transform;
-            float attlerockRadius = 80.0f;
-
-            Transform brittleHollow = Locator.GetAstroObject(AstroObject.Name.BrittleHollow).transform;
-            float brittleHollowRadius = 272.0f;
-            Transform volcanicMoon = Locator.GetAstroObject(AstroObject.Name.BrittleHollow)._moon.transform;
-            float volcanicMoonRadius = 97.3f;
-
-            Transform giantsDeep = Locator.GetAstroObject(AstroObject.Name.GiantsDeep).transform;
-            float giantsDeepRadius = 1100.0f;
-
-            Transform darkBramble = Locator.GetAstroObject(AstroObject.Name.DarkBramble).transform;
-            float darkBrambleRadius = 203.3f;
-
-            Transform comet = Locator.GetAstroObject(AstroObject.Name.Comet).transform;
-            float cometRadius = 83.0f;
-
-            List<(Vector3 pos, float radius, int id)> planets = new List<(Vector3 pos, float radius, int id)>()
+            foreach (ProxyBody proxy in planetProxies)
             {
-                (caveTwin.position, caveTwinRadius, 1),
-                (towerTwin.position, towerTwinRadius, 2),
-                (timberHearth.position, timberHearthRadius, 3),
-                (attlerock.position, attlerockRadius, 4),
-                (brittleHollow.position, brittleHollowRadius, 5),
-                (volcanicMoon.position, volcanicMoonRadius, 6),
-                (giantsDeep.position, giantsDeepRadius, 7),
-                (darkBramble.position, darkBrambleRadius, 8),
-                (comet.position, cometRadius, 9)
-            };
+                // If the proxy is null then skip it
+                if (proxy == null) continue;
 
-            List<Vector3> sunSampleDirections = GetSunSampleDirections(sunTransform.position, shipPos);
+                Transform realBodyTransform = proxy._realObjectTransform;
+                if (realBodyTransform == null) continue;
+
+                float radius = proxy._realObjectDiameter * 0.5f;
+                if (radius <= 15.0f) continue;
+
+                int astroNameId = -1;
+
+                if (proxy is ProxyPlanet)
+                {
+                    ProxyPlanet planetProxy = proxy as ProxyPlanet;
+                    AstroObject.Name? astroObjectName = planetProxy.astroObjectName;
+
+                    if (astroObjectName != null) {
+
+                        if (astroObjectName == AstroObject.Name.CaveTwin) astroNameId = 1;
+                        else if (astroObjectName == AstroObject.Name.TowerTwin) astroNameId = 2;
+                        else if (astroObjectName == AstroObject.Name.TimberHearth) astroNameId = 3;
+                        else if (astroObjectName == AstroObject.Name.BrittleHollow) astroNameId = 5;
+                        else if (astroObjectName == AstroObject.Name.GiantsDeep) astroNameId = 7;
+                        else if (astroObjectName == AstroObject.Name.DarkBramble) astroNameId = 8;
+
+                        // The Ash Twin's occlusion depends on the sand level
+                        if (astroObjectName == AstroObject.Name.TowerTwin)
+                        {
+                            radius = Locator.GetAstroObject(AstroObject.Name.TowerTwin)._sandLevelController?.GetRadius() ?? 169.0f;
+                        }
+
+                        // Timber Hearth and Brittle Hollow have moons, so just get them manually
+                        if (astroObjectName == AstroObject.Name.TimberHearth)
+                        {
+                            Transform attlerock = Locator.GetAstroObject(AstroObject.Name.TimberHearth)._moon.transform;
+                            float attlerockRadius = 80.0f;
+
+                            planets.Add((attlerock.position, attlerockRadius, 4));
+                        }
+                        else if (astroObjectName == AstroObject.Name.BrittleHollow)
+                        {
+                            Transform volcanicMoon = Locator.GetAstroObject(AstroObject.Name.BrittleHollow)._moon.transform;
+                            float volcanicMoonRadius = 97.3f;
+
+                            planets.Add((volcanicMoon.position, volcanicMoonRadius, 6));
+                        }
+                    }
+                }
+
+                // Check if the planet has a cloud layer
+                CloudLayerFluidVolume[] clfv = realBodyTransform.GetComponentsInChildren<CloudLayerFluidVolume>();
+
+                foreach (CloudLayerFluidVolume cloudLayer in clfv)
+                {
+                    if (cloudLayer.GetFluidType() == FluidVolume.Type.CLOUD)
+                    {
+                        astroNameId = 7; // Use Giant's Deep surface model for cloud approximations
+                        Collider coll = cloudLayer?._triggerVolume?._owCollider?.GetCollider();
+
+                        if (coll != null && coll is SphereCollider)
+                        {
+                            SphereCollider sphereColl = coll as SphereCollider;
+                            radius = Mathf.Max(sphereColl.radius, radius);
+                        }
+                    }
+                }
+
+                planets.Add((realBodyTransform.position, radius, astroNameId));
+            }
+
+            // Try to get the current sun's surface radius
+            float surfaceRadius = 0.0f;
+            if (sunController.TryGetComponent<SunController>(out SunController sunContr)) surfaceRadius = sunContr.GetSurfaceRadius();
+            else surfaceRadius = sunController.transform.localScale.x;
+
+            // Get the sample directions for the sun to check are clear
+            List<Vector3> sunSampleDirections = GetSunSampleDirections(sunPos, surfaceRadius, shipPos);
             int occludedSamples = 0;
 
-            foreach (Vector3 dir in sunSampleDirections) 
+            foreach (Vector3 dir in sunSampleDirections)
             {
-                if (IsSampleOccluded(sunTransform.position, shipPos, dir, planets)) occludedSamples++;
+                if (IsSampleOccluded(sunPos, shipPos, dir, planets)) occludedSamples++;
             }
 
             float occlusion = (float)occludedSamples / sunSampleDirections.Count;
@@ -371,6 +492,8 @@ namespace CleanEnergy
                 float normalisedDistance = (p.pos - shipPos).sqrMagnitude / (p.radius * p.radius);
                 if (normalisedDistance <= 1.0f) brightness *= GetPlanetDepthBasedBrightness(normalisedDistance, p.id);
             }
+
+            //modConsole.WriteLine($"Sun brightness fraction: {brightness}, Brightest Sun: {(brightestSun != null ? brightestSun.name : "None")}", MessageType.Info);
 
             return brightness;
         }
@@ -388,7 +511,7 @@ namespace CleanEnergy
                 case 7: return normDist > 0.95f ? 1.0f : 0.05f; // Giant's Deep
                 case 8: return 1.0f;                            // Dark Bramble
                 case 9: return 1.0f;                            // Comet
-                default: return 1.0f;
+                default: return normDist;
             }
         }
 
@@ -407,7 +530,11 @@ namespace CleanEnergy
                 if (dot < 0.0f) continue;
 
                 // Check if the ray intersects the planet
-                if (RayIntersectsSphere(origin, dir, p.pos, p.radius)) return true;
+                if (RayIntersectsSphere(origin, dir, p.pos, p.radius))
+                {
+                    //modConsole.WriteLine($"Ray blocked by: {p.id} with radius: {p.radius}", MessageType.Info);
+                    return true;
+                }
             }
 
             return false;
@@ -430,12 +557,9 @@ namespace CleanEnergy
             return distanceToRaySqr <= sphereRadius * sphereRadius;
         }
 
-        List<Vector3> GetSunSampleDirections(Vector3 sunPos, Vector3 observerPos)
+        List<Vector3> GetSunSampleDirections(Vector3 sunPos, float sunRadius, Vector3 observerPos)
         {
             List<Vector3> rayDirs = new List<Vector3>();
-
-            // Get the current radius of the sun
-            float sunRadius = Locator.GetSunController()?.GetSurfaceRadius() ?? 2000.0f;
 
             // Ray directly to sun
             Vector3 sunDir = (sunPos - observerPos).normalized;

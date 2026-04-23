@@ -16,10 +16,11 @@ However, the ship's battery is only so large meaning travellers will need to man
 
 The mod replaces the ship's fuel with solar power, which is generated based on the ship's distance to the sun and how much of the sun is in view of the ship.
 
-However, in [New Horizon's](https://outerwildsmods.com/mods/newhorizons/) systems the ship is set back to using fuel instead of solar power
+The mod does support [New Horizon's](https://outerwildsmods.com/mods/newhorizons/) solar systems, though you may need to adjust the battery and solar panel efficiency settings to make gameplay more fair (especially for larger systems!)
 
 ## Settings
 
+* "Use Solar Power" controls whether solar power or fuel should be used for the ship
 * The solar panel's efficiency (how fast the battery charges) can be changed in settings to be either Very Low, Low, Medium (default), High or Ultra.
 * The battery's efficiency (how well the battery maintains charge) can be changed to be either Very Low, Low, Medium (default), High or Ultra.
 * The solar panel decorations for the ship can be enabled or disabled as well as set to 1 of 7 layouts
