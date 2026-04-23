@@ -25,3 +25,5 @@ The mod does support [New Horizon's](https://outerwildsmods.com/mods/newhorizons
 * The battery's efficiency (how well the battery maintains charge) can be changed to be either Very Low, Low, Medium (default), High or Ultra.
 * The solar panel decorations for the ship can be enabled or disabled as well as set to 1 of 7 layouts
 
+<img width="1724" alt="outerWildscleanEnergyOWML" src="https://github.com/user-attachments/assets/d5f99edf-3469-4d4c-a5d2-42b0f11dd5da" />
+
