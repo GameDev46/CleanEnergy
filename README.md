@@ -1,6 +1,6 @@
 # Outer Wilds - Clean Energy
 
-<img width="1920" alt="outerWildsCleanEnergyIcon" alt="Player's ship in space with the sun reflecting off its solar panels" src="https://github.com/user-attachments/assets/4cdbabe8-1c4b-4b10-83eb-52e08d5c9311" />
+<img width="1724" alt="outerWildscleanEnergyOWML" alt="Player's ship in space with big text saying Clean Energy" src="https://github.com/user-attachments/assets/d5f99edf-3469-4d4c-a5d2-42b0f11dd5da" />
 
 <hr>
 
@@ -24,6 +24,3 @@ The mod does support [New Horizon's](https://outerwildsmods.com/mods/newhorizons
 * The solar panel's efficiency (how fast the battery charges) can be changed in settings to be either Very Low, Low, Medium (default), High or Ultra.
 * The battery's efficiency (how well the battery maintains charge) can be changed to be either Very Low, Low, Medium (default), High or Ultra.
 * The solar panel decorations for the ship can be enabled or disabled as well as set to 1 of 7 layouts
-
-<img width="1724" alt="outerWildscleanEnergyOWML" src="https://github.com/user-attachments/assets/d5f99edf-3469-4d4c-a5d2-42b0f11dd5da" />
-
